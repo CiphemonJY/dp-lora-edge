@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dp-lora-edge"
+version = "0.1.0"
+description = "Differentially private LoRA fine-tuning at calibrated epsilon, with a self-contained RDP accountant and honest, anomaly-aware gating."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.9"
+authors = [{ name = "CiphemonJY" }]
+keywords = ["differential-privacy", "lora", "federated-learning", "dp-sgd", "rdp", "peft"]
+dependencies = [
+  "torch>=2.0",
+  "transformers>=4.40",
+  "peft>=0.10",
+]
+
+[project.optional-dependencies]
+opacus = ["opacus>=1.4"]
+dev = ["pytest>=8.0", "datasets>=2.0"]
+
+[project.urls]
+Homepage = "https://github.com/CiphemonJY/dp-lora-edge"
+
+[tool.setuptools.packages.find]
+include = ["dp_lora*"]
+
+[tool.pytest.ini_options]
+markers = ["slow: downloads model weights / runs training"]
