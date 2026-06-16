@@ -133,7 +133,41 @@ it against Opacus across an operating grid (`dp_lora/calibrate.py`,
 claim the accountant is tight — it claims it is *safe* and characterises exactly
 where it is loose. That distinction is the whole point of the report.
 
-## 5. What to take away
+## 5. Clinical utility is not one number
+
+A DP-LoRA adapter that clears the gates in §3 has *recovered utility* — lower
+perplexity than base, a non-degenerate `lora_B`. That is necessary, not
+sufficient, for a clinical claim. A single perplexity or accuracy figure is
+exactly the "green dashboard" §1 warns against, one level up.
+
+A 2026 *JAMA Network Open* study evaluated 21 frontier LLMs on 29 standardized
+cases with the **PrIME-LLM** framework, which scores five domains *separately*:
+diagnostic testing, differential diagnosis, final diagnosis, management, and
+miscellaneous reasoning. The result is a sharp, reproducible shape:
+
+- **Final diagnosis is the easy domain** — accuracy 0.81–0.90.
+- **Differential diagnosis and diagnostic-test selection are the weak domains**,
+  together with handling uncertainty when several options remain live.
+- Reasoning-optimized models beat standard ones in ~99% of comparisons.
+
+Two consequences for anyone deploying a DP-LoRA-tuned model at the edge:
+
+1. **Evaluate per-domain, not in aggregate.** A model can post a strong overall
+   accuracy while being unsafe precisely where it matters — the breadth of the
+   differential and the next test to order. A single number averages that away,
+   the same way a believable perplexity hid the no-op in §1.
+2. **Tune for the weak domains, or you will not move them.** A training or
+   selection signal keyed on the *final answer* optimizes the domain models are
+   already good at and supplies no gradient for differential breadth or test
+   selection. If the differential is the product, it has to be in the objective
+   and the eval — not assumed to come along for free.
+
+This matches the study's own framing: off-the-shelf LLMs are not ready for
+unsupervised patient-facing decisions; the defensible deployment is
+clinician-in-the-loop decision support, where a ranked differential with its
+supporting evidence is *reviewable* rather than authoritative.
+
+## 6. What to take away
 
 1. **A green dashboard is not a result.** Every number here is gated on
    improvement over a measured baseline and on a non-degenerate adapter; the
@@ -143,6 +177,9 @@ where it is loose. That distinction is the whole point of the report.
 3. **Calibrate, don't guess.** "σ=0.5" is not a privacy claim until you state
    the ε it buys at your sampling rate — and validate the accountant that told
    you so.
+4. **One accuracy number is a green dashboard too.** Clinical reasoning fails
+   *per-domain* — strong on final diagnosis, weak on the differential and the
+   workup. Evaluate, and train, those domains explicitly (§5).
 
 ---
 
@@ -165,3 +202,6 @@ accountant, FFA-LoRA trainer, and gates are in `dp_lora/`.
 - Abadi et al. (2016), *Deep Learning with Differential Privacy*.
 - Sun et al. (2024), *Improving LoRA in Privacy-Preserving Federated Learning*
   (FFA-LoRA).
+- *PrIME-LLM clinical-reasoning evaluation* (2026), JAMA Network Open —
+  domain-wise scoring of LLM clinical reasoning (final diagnosis strong;
+  differential diagnosis and test selection weak).
