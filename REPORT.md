@@ -279,3 +279,11 @@ python scripts/multiseed_ablation.py --experiment all --seeds 3 \
 > rendezvous mechanism hangs silently on the DGX Spark cluster even when
 > TCP ports are confirmed reachable. The single-node fallback runs all
 > experiments sequentially on one GPU.
+>
+> **Root cause identified (2026-06-20):** torchrun's c10d and static rendezvous
+> backends both hang silently — zero output, timeout kill (exit 124). Env-based
+> init (`MASTER_ADDR`, `MASTER_PORT`, `RANK`, `WORLD_SIZE` +
+> `dist.init_process_group(backend="nccl")`) works perfectly: a broadcast test
+> completed in 1.3s with correct tensor propagation. The fix is to use
+> `scripts/launch_2node.py` (env-based init wrapper) instead of `torchrun`.
+> This matches the existing 2-node LISA_FTM training pattern.
