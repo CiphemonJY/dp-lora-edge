@@ -43,6 +43,8 @@ class DPConfig:
     delta: float = 1e-5
     seed: int = 42
     target_modules: List[str] = field(default_factory=lambda: ["query_key_value"])
+    global_clip: bool = False           # global per-sample clip (recommended for P > n)
+    sampling_rate: float = 1.0         # Poisson subsampling rate for ε accounting
 
 
 class SanityGateError(RuntimeError):
@@ -69,7 +71,17 @@ def _probe_loss(model, tokenizer, texts, device, max_length=512) -> float:
 
 
 def _dp_lora_gradients(model, batch_texts, tokenizer, device, cfg: DPConfig, max_length=512) -> dict:
-    """Per-sample gradients on lora_B only; clip to cfg.clip_norm, add Gaussian noise."""
+    """Per-sample gradients on lora_B only; clip to cfg.clip_norm, add Gaussian noise.
+
+    When ``cfg.global_clip`` is False (default), each LoRA parameter tensor is
+    clipped independently to ``clip_norm``. This is simpler but can under-state ε
+    when the number of LoRA modules (P) exceeds the batch size (n) — see
+    SECURITY.md "Per-parameter clipping caveat".
+
+    When ``cfg.global_clip`` is True, the combined L2 norm across ALL lora_B
+    parameters is clipped to ``clip_norm`` per sample. This is the standard
+    DP-SGD approach and the accountant's ε is correct regardless of P or n.
+    """
     deltas: dict = {}
     n = len(batch_texts)
     for text in batch_texts:
@@ -90,17 +102,36 @@ def _dp_lora_gradients(model, batch_texts, tokenizer, device, cfg: DPConfig, max
     if not deltas:
         return {}
 
-    noised: dict = {}
-    for name, grads in deltas.items():
-        g = torch.stack(grads)
-        norms = torch.stack([x.norm(2) for x in g])
-        factor = torch.clamp_max(cfg.clip_norm / (norms + 1e-8), 1.0)
-        shape = [g.size(0)] + [1] * (g.ndim - 1)
-        clipped = g * factor.view(shape)
-        avg = clipped.mean(dim=0)
-        noise_std = cfg.noise_multiplier * cfg.clip_norm / n
-        noised[name] = (avg + torch.randn_like(avg) * noise_std).to(device)
-    return noised
+    if cfg.global_clip:
+        # Global per-sample clipping: combined L2 norm across all lora_B params
+        sample_norms = []
+        for i in range(n):
+            combined = torch.cat([deltas[name][i].flatten() for name in deltas])
+            sample_norms.append(combined.norm(2))
+        sample_norms = torch.stack(sample_norms)
+        factor = torch.clamp_max(cfg.clip_norm / (sample_norms + 1e-8), 1.0)
+        noised: dict = {}
+        for name, grads in deltas.items():
+            g = torch.stack(grads)
+            shape = [g.size(0)] + [1] * (g.ndim - 1)
+            clipped = g * factor.view(shape)
+            avg = clipped.mean(dim=0)
+            noise_std = cfg.noise_multiplier * cfg.clip_norm / n
+            noised[name] = (avg + torch.randn_like(avg) * noise_std).to(device)
+        return noised
+    else:
+        # Per-parameter clipping (original behaviour, documented caveat)
+        noised: dict = {}
+        for name, grads in deltas.items():
+            g = torch.stack(grads)
+            norms = torch.stack([x.norm(2) for x in g])
+            factor = torch.clamp_max(cfg.clip_norm / (norms + 1e-8), 1.0)
+            shape = [g.size(0)] + [1] * (g.ndim - 1)
+            clipped = g * factor.view(shape)
+            avg = clipped.mean(dim=0)
+            noise_std = cfg.noise_multiplier * cfg.clip_norm / n
+            noised[name] = (avg + torch.randn_like(avg) * noise_std).to(device)
+        return noised
 
 
 def build_model(model_id: str, cfg: DPConfig, device: str):
@@ -169,7 +200,7 @@ def train_dp_lora(
                 raise SanityGateError("probe loss unchanged after round 1 — training is a no-op")
 
     steps = cfg.rounds * cfg.local_steps
-    eps = compute_epsilon(cfg.noise_multiplier, steps, cfg.delta)
+    eps = compute_epsilon(cfg.noise_multiplier, steps, cfg.delta, sampling_rate=cfg.sampling_rate)
     return {
         "model": model_id,
         "base_probe_loss": base_probe,

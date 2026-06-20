@@ -149,3 +149,21 @@ def test_compute_epsilon_rejects_invalid_delta():
         compute_epsilon(1.0, 80, delta=1.0)
     with pytest.raises(ValueError):
         compute_epsilon(1.0, 80, delta=-0.5)
+
+
+def test_global_clip_config_exists():
+    """DPConfig should support global_clip option."""
+    from dp_lora.trainer import DPConfig
+    cfg = DPConfig(global_clip=True)
+    assert cfg.global_clip is True
+    cfg2 = DPConfig()
+    assert cfg2.global_clip is False  # default: per-parameter
+
+
+def test_sampling_rate_config_exists():
+    """DPConfig should support sampling_rate for ε accounting."""
+    from dp_lora.trainer import DPConfig
+    cfg = DPConfig(sampling_rate=0.1)
+    assert cfg.sampling_rate == 0.1
+    cfg2 = DPConfig()
+    assert cfg2.sampling_rate == 1.0  # default: full participation

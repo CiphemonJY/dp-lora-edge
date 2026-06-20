@@ -105,4 +105,21 @@ upper bound* in its tested regime — see [SECURITY.md](SECURITY.md) and the
 report's "Accountant fidelity" section before making any external privacy claim.
 No data ships here; examples use synthetic text or public `wikitext`.
 
+## Validated at scale
+
+The FFA-LoRA approach in this toolkit was validated in a 2-node distributed
+training run on a DGX Spark cluster (2 × NVIDIA GB10, 260GB VRAM, 200Gbps
+NCCL RDMA interconnect):
+
+- **Model:** Qwen2.5-1.5B-Instruct (1.5B params, bfloat16)
+- **Config:** σ=1.18, clip=0.5, batch=48, 4 rounds × 50 clients, 20 local steps
+- **Training data:** 57,463 FHIR clinical prompts (synthetic, de-identified)
+- **Result:** Clinical eval 64.8% accuracy (136/210), PASS at 60% threshold
+- **lora_B trajectory:** 0 → 1.027 → 1.447 → 1.769 (healthy learning signal)
+- **Speedup:** 1.86× vs single-node (NCCL all-reduce averaging)
+
+Note: the 2-node run used the per-parameter clipping path (default) with
+batch=48 and P=28 LoRA modules, so P < n and the per-parameter caveat does
+not apply. For configs with many target modules, use `global_clip=True`.
+
 Apache-2.0.

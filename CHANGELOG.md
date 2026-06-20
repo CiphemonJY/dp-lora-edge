@@ -25,6 +25,12 @@
 - SECURITY.md — per-parameter clipping caveat, scope of conservatism claim.
 - `compute_epsilon` — input validation for `delta` and `sampling_rate`.
 - `noise_per_element` — input validation for `batch_size`.
+- `DPConfig.global_clip` — global per-sample clipping option (standard DP-SGD).
+  When True, clips combined L2 norm across all lora_B params per sample.
+  Recommended when number of LoRA modules (P) exceeds batch size (n).
+- `DPConfig.sampling_rate` — Poisson subsampling rate for ε accounting.
+  Passed to `compute_epsilon` for correct privacy cost under subsampling.
+- README.md — "Validated at scale" section with 2-node DGX training results.
 
 ### Changed
 - `test_accountant_is_conservative_never_underestimates` →
@@ -32,6 +38,10 @@
 - `test_noise_per_element_averages_down_with_batch` updated for `σ·C/n` formula.
 - REPORT.md updated: corrected delta values, noise formula, per-parameter
   clipping section, scoped conservatism claims.
+- `_dp_lora_gradients` now supports `global_clip=True` for standard DP-SGD
+  global per-sample clipping (addresses per-parameter clipping caveat).
+- `train_dp_lora` now passes `sampling_rate` to `compute_epsilon` for correct
+  ε accounting under subsampling.
 
 ## [0.1.0] — 2026-06-12
 
