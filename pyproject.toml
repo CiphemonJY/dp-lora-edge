@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dp-lora-edge"
-version = "0.2.1"
+version = "0.2.2"
 description = "Differentially private LoRA fine-tuning at calibrated epsilon, with a self-contained RDP accountant and honest, anomaly-aware gating."
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -27,6 +27,9 @@ dependencies = [
   "transformers>=4.40",
   "peft>=0.10",
 ]
+
+[project.scripts]
+dp-lora-calibrate = "dp_lora.calibrate:calibrate_cli"
 
 [project.optional-dependencies]
 opacus = ["opacus>=1.4"]

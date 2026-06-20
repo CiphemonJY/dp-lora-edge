@@ -59,3 +59,17 @@ def calibrate(target_epsilon: float, steps: int, sampling_rate: float = 1.0,
         "steps": steps,
         "sampling_rate": sampling_rate,
     }
+
+
+def calibrate_cli():
+    """CLI entry point: ``dp-lora-calibrate --target-epsilon 8 --steps 80 --sampling-rate 0.05``"""
+    import argparse
+    p = argparse.ArgumentParser(description="Calibrate noise multiplier σ for a target ε")
+    p.add_argument("--target-epsilon", type=float, required=True, help="Target privacy budget ε")
+    p.add_argument("--steps", type=int, required=True, help="Number of training steps")
+    p.add_argument("--sampling-rate", type=float, default=1.0, help="Poisson subsampling rate q")
+    p.add_argument("--delta", type=float, default=1e-5, help="Privacy δ")
+    args = p.parse_args()
+    result = calibrate(args.target_epsilon, args.steps, args.sampling_rate, args.delta)
+    print(f"Target ε={result['target_epsilon']}, σ={result['calibrated_sigma']}, "
+          f"achieved ε={result['achieved_epsilon']}, steps={result['steps']}, q={result['sampling_rate']}")

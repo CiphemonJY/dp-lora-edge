@@ -86,3 +86,13 @@ def test_accountant_is_conservative_in_tested_grid():
             ours = compute_epsilon(sigma, 80, 1e-5, q)
             theirs = opacus_epsilon(sigma, 80, q)
             assert ours >= theirs - 1e-6, f"under-estimate at σ={sigma}, q={q}"
+
+
+def test_import_smoke():
+    """Basic import must succeed and expose the public API."""
+    import dp_lora
+    assert hasattr(dp_lora, '__version__')
+    assert hasattr(dp_lora, 'train_dp_lora')
+    assert hasattr(dp_lora, 'DPConfig')
+    assert hasattr(dp_lora, 'compute_epsilon')
+    assert hasattr(dp_lora, 'calibrate_noise_for_epsilon')

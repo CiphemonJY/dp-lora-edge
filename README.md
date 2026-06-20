@@ -39,7 +39,7 @@ guessed. Full write-up in **[REPORT.md](REPORT.md)**.
   *subsampled* Gaussian mechanism (Mironov–Talwar–Zhang 2019), plus
   `calibrate_noise_for_epsilon` (give it a privacy budget, get the σ to train
   at) and `noise_per_element` (the signal-to-noise diagnostic that explains
-  Gate 1). Cross-validated against Opacus; **conservative by construction** in
+  Gate 1). Cross-validated against Opacus; **conservative in the tested regime** in
   the default configuration — see [SECURITY.md](SECURITY.md) for the precise
   scope of this claim.
 - **`dp_lora/trainer.py`** — an **FFA-LoRA** DP-SGD trainer (freeze `lora_A`,

@@ -193,3 +193,12 @@ accountant, FFA-LoRA trainer, and gates are in `dp_lora/`.
 - Abadi et al. (2016), *Deep Learning with Differential Privacy*.
 - Sun et al. (2024), *Improving LoRA in Privacy-Preserving Federated Learning*
   (FFA-LoRA).
+
+## Single-seed caveat
+
+Results in `results/gates.json` are from **single-seed runs**. Multi-seed
+variance was not measured. The lora_B_norm trajectory and gate verdicts are
+deterministic (the no-op detection logic does not depend on random seeds), but
+the exact perplexity values may vary by ±1-2 points across seeds. A proper
+multi-seed study (3-5 seeds per arm) would tighten the confidence intervals on
+the reported delta_pct values.

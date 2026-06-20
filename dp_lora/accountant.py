@@ -123,6 +123,10 @@ def calibrate_noise_for_epsilon(
     """
     if target_epsilon <= 0:
         raise ValueError("target_epsilon must be positive")
+    if delta <= 0 or delta >= 1:
+        raise ValueError("delta must be in (0, 1)")
+    if sampling_rate <= 0:
+        raise ValueError("sampling_rate must be positive")
     lo, hi = 1e-3, 1.0
     # Grow hi until ε(hi) <= target.
     while compute_epsilon(hi, steps, delta, sampling_rate) > target_epsilon:

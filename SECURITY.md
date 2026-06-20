@@ -37,3 +37,14 @@ cautions:
    specific configuration before making any privacy claim.**
 
 Report issues via GitHub issues. Do not include sensitive data in reports.
+
+5. **Poisson vs. hypergeometric subsampling.** The RDP accountant assumes
+   Poisson subsampling (each sample included independently with probability
+   q). The trainer uses fixed-size batches (hypergeometric sampling without
+   replacement). For small sampling rates (q << 1) the difference is
+   negligible. For large q (e.g. q=0.48), Poisson is the standard
+   assumption in the DP literature and our ε is valid under it, but the actual
+   privacy may be slightly stronger (hypergeometric amplifies privacy more than
+   Poisson). This is the safe direction — we may over-state ε, never under-state
+   it due to sampling assumptions. See Mironov–Talwar–Zhang 2019 §1.3 for
+   discussion.

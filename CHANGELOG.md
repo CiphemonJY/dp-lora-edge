@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.2.2] — 2026-06-19
+
+### Added
+- **Import smoke test** — `test_import_smoke` verifies basic packaging works.
+- **δ validation in `calibrate_noise_for_epsilon`** — raises `ValueError` for
+  delta outside (0, 1) and non-positive sampling_rate, matching `compute_epsilon`.
+- **`py.typed` marker** — PEP 561 marker so type checkers know the package
+  ships type hints.
+- **CLI entry point** — `dp-lora-calibrate --target-epsilon 8 --steps 80`
+  command-line tool for quick privacy budget calibration.
+- **Standalone training script** — `examples/train_dp_lora.py` — quick-start
+  FFA-LoRA DP-SGD on wikitext-2. Downloads data, calibrates σ, trains, reports.
+- **Poisson/hypergeometric sampling note** — SECURITY.md now documents that the
+  accountant assumes Poisson subsampling while the trainer uses fixed-size
+  batches. Safe direction (over-states ε for hypergeometric).
+
+### Changed
+- **"Conservative by construction" → "conservative in the tested regime"** in
+  README. The phrase "by construction" implies mathematical proof; we only
+  have empirical verification on a finite grid.
+- **Single-seed caveat** added to REPORT.md — gates.json results are from
+  single-seed runs, exact perplexity may vary ±1-2 points.
+
+### Fixed
+- **calibration_table.py parameter mismatch** — verified resolved (signatures
+  match in v0.2.0+). Smoke test confirms the example script runs correctly.
+
 ## [0.2.1] — 2026-06-19
 
 ### Added

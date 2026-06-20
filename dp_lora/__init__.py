@@ -11,7 +11,7 @@ from .calibrate import calibrate, cross_check, opacus_epsilon
 from .gate import compare_to_base, gate, lora_diagnostics, perplexity
 from .trainer import DPConfig, SanityGateError, build_model, train_dp_lora
 
-__version__ = "0.2.0"
+__version__ = "0.2.2"
 
 __all__ = [
     "compute_epsilon",
