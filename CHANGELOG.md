@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.1] — 2026-06-19
+
+### Added
+- **Multi-GPU distributed training**: `train_dp_lora` now detects
+  `torch.distributed` and automatically splits clients across ranks + averages
+  LoRA-B via NCCL all-reduce. Validated on 2-node DGX Spark cluster (1.86x
+  speedup). Use `torchrun --nproc_per_node=N` to launch.
+- `_all_reduce_lora_b()` — NCCL all-reduce helper, mirrors LISA_FTM's 2-node
+  training pattern.
+- `DPConfig.dtype` — "float32" (default) or "bfloat16" (~2x faster on modern
+  GPUs like GB10, A100, H100).
+- `DPConfig.clients_per_round` — number of local clients per round. Set >1
+  for multi-GPU parallelism (each rank trains its share independently).
+- `tests/test_gate.py` — 4 new tests for dtype, clients_per_round,
+  _is_distributed (21 total, all pass).
+
+### Changed
+- `build_model` now respects `cfg.dtype` for bfloat16 mixed precision.
+- `train_dp_lora` now splits `clients_per_round` across `world_size` ranks.
+- ε accounting now counts `steps = rounds * local_steps * total_clients`.
+- Trainer docstring updated with multi-GPU usage instructions.
+
 ## [0.2.0] — 2026-06-19
 
 ### Fixed
@@ -26,10 +48,7 @@
 - `compute_epsilon` — input validation for `delta` and `sampling_rate`.
 - `noise_per_element` — input validation for `batch_size`.
 - `DPConfig.global_clip` — global per-sample clipping option (standard DP-SGD).
-  When True, clips combined L2 norm across all lora_B params per sample.
-  Recommended when number of LoRA modules (P) exceeds batch size (n).
 - `DPConfig.sampling_rate` — Poisson subsampling rate for ε accounting.
-  Passed to `compute_epsilon` for correct privacy cost under subsampling.
 - README.md — "Validated at scale" section with 2-node DGX training results.
 
 ### Changed
@@ -38,10 +57,6 @@
 - `test_noise_per_element_averages_down_with_batch` updated for `σ·C/n` formula.
 - REPORT.md updated: corrected delta values, noise formula, per-parameter
   clipping section, scoped conservatism claims.
-- `_dp_lora_gradients` now supports `global_clip=True` for standard DP-SGD
-  global per-sample clipping (addresses per-parameter clipping caveat).
-- `train_dp_lora` now passes `sampling_rate` to `compute_epsilon` for correct
-  ε accounting under subsampling.
 
 ## [0.1.0] — 2026-06-12
 

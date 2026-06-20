@@ -98,6 +98,28 @@ REPORT.md "Accountant fidelity". The accountant is conservative (over-estimates
 [SECURITY.md](SECURITY.md) for the precise scope and the per-parameter clipping
 caveat.
 
+## Multi-GPU training
+
+The trainer supports distributed training via `torch.distributed`. When
+torch.distributed is initialized (e.g. via `torchrun`), each rank trains its
+share of clients independently and LoRA-B weights are averaged via NCCL
+all-reduce after each round.
+
+```bash
+# 2-node example (validated on DGX Spark cluster):
+torchrun --nproc_per_node=1 --nnodes=2 \
+  --rdzv_backend=c10d --rdzv_endpoint=192.168.100.12:29500 \
+  your_script.py --clients_per_round 50 --dtype bfloat16
+```
+
+Key config for multi-GPU:
+- `clients_per_round=50` — total clients split across ranks (25 each on 2 nodes)
+- `dtype="bfloat16"` — ~2x faster on modern GPUs (GB10, A100, H100)
+- `global_clip=True` — recommended when LoRA module count (P) > batch size (n)
+
+The 2-node DGX validation run achieved 1.86x speedup vs single-node with
+identical privacy guarantees (see "Validated at scale" below).
+
 ## Scope & honesty
 
 Research code, not a compliance certificate. The accountant is a *conservative

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dp-lora-edge"
-version = "0.2.0"
+version = "0.2.1"
 description = "Differentially private LoRA fine-tuning at calibrated epsilon, with a self-contained RDP accountant and honest, anomaly-aware gating."
 readme = "README.md"
 license = { text = "Apache-2.0" }

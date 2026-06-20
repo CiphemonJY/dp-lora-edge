@@ -56,7 +56,6 @@ def make_mock_model_with_lora(norms):
     params = []
     for i, n in enumerate(norms):
         p = MockParams(n)
-        # Attach name attribute via namedtuple pattern
         params.append((f"model.layers.{i}.lora_B.weight", p))
     model.named_parameters = lambda: iter(params)
     return model
@@ -100,7 +99,6 @@ def test_compare_to_base_pass():
     result = compare_to_base(base_ppl=13.88, trained=trained, min_improvement=0.05)
     assert result["pass"] is True
     assert result["anomaly"] is False
-    # delta = (13.88 - 9.59) / 13.88 = 0.309... = 30.9%
     assert abs(result["delta_pct"] - 30.91) < 0.5
 
 
@@ -110,7 +108,7 @@ def test_compare_to_base_fail_no_improvement():
     trained = {"perplexity": 14.49, "lora_B_degenerate": False, "avg_lora_B_norm": 1.15}
     result = compare_to_base(base_ppl=13.88, trained=trained, min_improvement=0.05)
     assert result["pass"] is False
-    assert result["delta_pct"] < 0  # negative delta = worse than base
+    assert result["delta_pct"] < 0
 
 
 def test_compare_to_base_anomaly_degenerate():
@@ -134,9 +132,7 @@ def test_compare_to_base_anomaly_identical_ppl():
 def test_noise_per_element_correct_formula():
     """Verify the corrected noise formula: sigma * C / n (not sqrt(n))."""
     from dp_lora.accountant import noise_per_element
-    # sigma=0.5, C=0.5, batch=4: 0.5 * 0.5 / 4 = 0.0625
     assert math.isclose(noise_per_element(0.5, 0.5, 4), 0.0625, rel_tol=1e-6)
-    # sigma=0.5, C=0.5, batch=48: 0.5 * 0.5 / 48 = 0.005208...
     assert math.isclose(noise_per_element(0.5, 0.5, 48), 0.5 * 0.5 / 48, rel_tol=1e-6)
 
 
@@ -157,7 +153,7 @@ def test_global_clip_config_exists():
     cfg = DPConfig(global_clip=True)
     assert cfg.global_clip is True
     cfg2 = DPConfig()
-    assert cfg2.global_clip is False  # default: per-parameter
+    assert cfg2.global_clip is False
 
 
 def test_sampling_rate_config_exists():
@@ -166,4 +162,28 @@ def test_sampling_rate_config_exists():
     cfg = DPConfig(sampling_rate=0.1)
     assert cfg.sampling_rate == 0.1
     cfg2 = DPConfig()
-    assert cfg2.sampling_rate == 1.0  # default: full participation
+    assert cfg2.sampling_rate == 1.0
+
+
+def test_dtype_config_exists():
+    """DPConfig should support dtype for mixed precision training."""
+    from dp_lora.trainer import DPConfig
+    cfg = DPConfig(dtype="bfloat16")
+    assert cfg.dtype == "bfloat16"
+    cfg2 = DPConfig()
+    assert cfg2.dtype == "float32"
+
+
+def test_clients_per_round_config_exists():
+    """DPConfig should support clients_per_round for multi-GPU parallelism."""
+    from dp_lora.trainer import DPConfig
+    cfg = DPConfig(clients_per_round=50)
+    assert cfg.clients_per_round == 50
+    cfg2 = DPConfig()
+    assert cfg2.clients_per_round == 1  # default: single client
+
+
+def test_is_distributed_false_without_init():
+    """_is_distributed should return False when torch.distributed is not initialized."""
+    from dp_lora.trainer import _is_distributed
+    assert _is_distributed() is False
