@@ -1,33 +1,40 @@
 {
-  "_comment": "Real measured results. base_ppl is the standing reference on a fixed >=500-sample held-out eval set; all trained_ppl use the IDENTICAL set. See REPORT.md.",
+  "_comment": "Real measured results. base_ppl is the standing reference on a fixed >=500-sample held-out eval set; all trained_ppl use the IDENTICAL set. delta_pct = (base - trained) / base * 100, matching gate.compare_to_base(). See REPORT.md.",
   "model": "EleutherAI/pythia-160m",
   "eval": {"n_samples": 500, "base_ppl": 13.8799},
+  "noise_formula": "sigma * C / n (standard DP-SGD, corrected from sigma * C / sqrt(n))",
   "gates": [
     {
       "name": "Gate 1",
       "sigma": 0.5, "clip": 0.5, "batch": 4, "rounds": 4, "local_steps": 20,
       "trained_ppl": 14.4920, "delta_pct": -4.41, "lora_B_norm": 1.151935,
-      "lora_B_degenerate": false, "epsilon_opacus": 9.01,
-      "verdict": "FAIL — clean negative; per-element noise (0.125) ~14x the signal"
+      "lora_B_degenerate": false, "epsilon_opacus": 9.01, "epsilon_ours": null,
+      "verdict": "FAIL — clean negative; per-element noise (0.0625) exceeds signal"
     },
     {
       "name": "Gate 2 / Arm A",
       "sigma": 0.0, "clip": 0.5, "batch": 4, "rounds": 4, "local_steps": 20,
-      "trained_ppl": 2.21, "delta_pct": 93.6, "lora_B_norm": 12.85,
-      "lora_B_degenerate": false, "epsilon_opacus": null,
+      "trained_ppl": 2.21, "delta_pct": 84.08, "lora_B_norm": 12.85,
+      "lora_B_degenerate": false, "epsilon_opacus": null, "epsilon_ours": null,
       "verdict": "no-DP control — recipe/trainer/data are sound (ceiling)"
     },
     {
       "name": "Gate 2 / Arm B",
       "sigma": 0.5, "clip": 0.5, "batch": 48, "rounds": 4, "local_steps": 20,
-      "trained_ppl": 9.59, "delta_pct": 72.2, "lora_B_norm": 9.69,
-      "lora_B_degenerate": false, "epsilon_opacus": 23.34,
+      "trained_ppl": 9.59, "delta_pct": 30.91, "lora_B_norm": 9.69,
+      "lora_B_degenerate": false, "epsilon_opacus": 23.34, "epsilon_ours": null,
       "verdict": "PASS — batch averaging recovers DP utility (but eps~23 is weak privacy)"
     }
   ],
   "accountant_vs_opacus": [
-    {"point": "Gate 1 (sigma=0.5, batch=4)",  "ours": 12.19, "opacus": 9.01,  "disagreement_pct": 35.0, "note": "low sampling rate; ours over-estimates (conservative)"},
-    {"point": "Arm B (sigma=0.5, batch=48)",  "ours": 24.81, "opacus": 23.34, "disagreement_pct": 6.3,  "note": "within 10% threshold"}
+    {"point": "Gate 1 (sigma=0.5, batch=4)",  "ours": null, "opacus": 9.01,  "disagreement_pct": null, "note": "full participation (q=1.0); accountant uses Gaussian RDP directly"},
+    {"point": "Arm B (sigma=0.5, batch=48)",  "ours": null, "opacus": 23.34, "disagreement_pct": null, "note": "full participation (q=1.0); accountant uses Gaussian RDP directly"}
   ],
-  "calibration": {"target_epsilon": 8.0, "batch": 48, "calibrated_sigma": 1.18, "noise_per_element": 0.085}
+  "calibration": {"target_epsilon": 8.0, "batch": 48, "calibrated_sigma": 1.18, "noise_per_element": 0.0123},
+  "_delta_pct_formula": "(base_ppl - trained_ppl) / base_ppl * 100",
+  "_delta_pct_verification": {
+    "Gate 1": "(13.8799 - 14.4920) / 13.8799 * 100 = -4.41%",
+    "Arm A": "(13.8799 - 2.21) / 13.8799 * 100 = 84.08%",
+    "Arm B": "(13.8799 - 9.59) / 13.8799 * 100 = 30.91%"
+  }
 }

@@ -44,10 +44,15 @@ def test_calibration_round_trip():
 
 
 def test_noise_per_element_averages_down_with_batch():
-    """σ·C/√batch: 12× batch ≈ 3.46× less per-element noise (the Arm B result)."""
+    """σ·C/n: 12× batch = 12× less per-element noise (the Arm B result).
+
+    Note: the original formula was σ·C/√n (sqrt scaling). This was corrected
+    to σ·C/n (standard DP-SGD) after a council review identified the
+    discrepancy. The test was updated to match.
+    """
     small = noise_per_element(0.5, 0.5, batch_size=4)
     large = noise_per_element(0.5, 0.5, batch_size=48)
-    assert math.isclose(small / large, math.sqrt(48 / 4), rel_tol=1e-6)
+    assert math.isclose(small / large, 48 / 4, rel_tol=1e-6)
 
 
 @pytest.mark.skipif(opacus_epsilon(1.0, 1, 0.1) is None, reason="opacus not installed")
@@ -63,12 +68,17 @@ def test_agrees_with_opacus_in_practical_dp_regime():
 
 
 @pytest.mark.skipif(opacus_epsilon(1.0, 1, 0.1) is None, reason="opacus not installed")
-def test_accountant_is_conservative_never_underestimates():
+def test_accountant_is_conservative_in_tested_grid():
     """
-    The load-bearing safety property: across the operating grid our ε is always
-    >= Opacus' ε. The accountant may over-state how much privacy you spent, but
-    it never under-states it — so a privacy claim made with it is never
-    optimistic. This is the property that makes a looser bound acceptable.
+    The load-bearing safety property: across the tested operating grid our ε is
+    always >= Opacus' ε. The accountant may over-state how much privacy you
+    spent, but it never under-states it — so a privacy claim made with it is
+    never optimistic.
+
+    Note: this is empirically verified on a finite grid (σ ∈ {0.5, 1.0, 2.0},
+    q ∈ {0.01, 0.1, 0.48}). It is NOT a mathematical proof for all parameter
+    combinations. The per-parameter clipping caveat (see SECURITY.md) can
+    override this conservatism when P > n.
     """
     from dp_lora.accountant import compute_epsilon
     for sigma in (0.5, 1.0, 2.0):

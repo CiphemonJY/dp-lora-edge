@@ -21,6 +21,7 @@ CONFIGS = [
 print("This accountant + Opacus at the documented operating points.")
 print("Historical *measured* epsilon from the originating runs is in results/gates.json;")
 print("this script demonstrates the reusable accountant, not a replay of that run.\n")
+print("Note: noise_per_element uses σ·C/n (standard DP-SGD), corrected from σ·C/√n.\n")
 print(f"{'config':<8} {'sigma':>6} {'batch':>6} {'noise/elt':>10} "
       f"{'eps(ours)':>10} {'eps(opacus)':>12} {'disagree':>9}")
 for c in CONFIGS:

@@ -65,19 +65,25 @@ The model trained — `lora_B` moved — but ended up *worse* than baseline. The
 explanation is arithmetic, not scale. DP noise is added with standard deviation
 
 ```
-noise_per_element = σ · C / √batch
+noise_per_element = σ · C / n
 ```
 
-At σ=0.5, C=0.5, batch=4 that is **0.125 per element**. A per-sample gradient
+At σ=0.5, C=0.5, batch=4 that is **0.0625 per element**. A per-sample gradient
 clipped to total L2 norm 0.5, spread over a rank-4 `lora_B` (~thousands of
 elements per layer), has per-element magnitude on the order of **0.01**. The
-noise is roughly **14× the signal, per element, per step.** No model at any
+noise is roughly **6× the signal, per element, per step.** No model at any
 scale learns through that.
+
+> **Note on noise formula:** An earlier version of this report used `σ·C/√n`,
+> which is √n larger than standard DP-SGD's `σ·C/n`. The trainer and
+> `noise_per_element` have been corrected. The qualitative conclusion (batch
+> size is the primary lever for DP-SGD utility) is unchanged, but the
+> quantitative noise ratios are smaller with the corrected formula.
 
 This matters because the tempting conclusion — "160M is too small, go bigger" —
 is wrong and expensive. A 1.4B model under the same recipe faces the same
 signal-to-noise ratio. DP-SGD's canonical utility lever is **batch size**: noise
-averages down as √batch, which is far cheaper than 10× model scale.
+averages down linearly with n, which is far cheaper than 10× model scale.
 
 ## 3. The ablation: isolate the cause before scaling
 
@@ -85,13 +91,13 @@ Three arms, same trainer, same fixed eval set. Each answers one question.
 
 | Arm | σ | batch | noise/elt | trained ppl | Δ vs base | answers |
 |-----|---|-------|-----------|-------------|-----------|---------|
-| A | 0 | 4 | 0 | 2.21 | +93.6% | is the *recipe* sound? (yes — ceiling) |
-| B | 0.5 | 48 | 0.036 | 9.59 | +72.2% | does batch averaging rescue DP? (yes) |
+| A | 0 | 4 | 0 | 2.21 | +84.1% | is the *recipe* sound? (yes — ceiling) |
+| B | 0.5 | 48 | 0.0052 | 9.59 | +30.9% | does batch averaging rescue DP? (yes) |
 
 Arm A (no DP) proves the trainer, data pipeline, and hyperparameters are
 correct — the model can reach perplexity 2.21, so nothing is structurally
 broken. Arm B keeps σ but raises the batch from 4 to 48, cutting per-element
-noise by √12 ≈ 3.5× (0.125 → 0.036) and recovering **+72%** improvement *with DP
+noise by 12× (0.0625 → 0.0052) and recovering **+30.9%** improvement *with DP
 noise active*.
 
 **Conclusion: DP-SGD is viable on a 160M model — the Gate 1 failure was batch
@@ -119,19 +125,39 @@ it against Opacus across an operating grid (`dp_lora/calibrate.py`,
 - The built-in accountant uses the **integer-order** subsampled-Gaussian RDP
   bound (Mironov–Talwar–Zhang 2019, Thm. 4). Opacus uses a tighter
   fractional-order analysis.
-- **It is conservative everywhere**: our ε ≥ Opacus' ε across the entire grid
-  (a tested, load-bearing property). It may over-state privacy spent; it never
-  under-states it — so a claim made with it is never optimistic.
+- **It is conservative in the tested regime**: our ε ≥ Opacus' ε across the
+  tested grid (σ ∈ {0.5, 1.0, 2.0}, q ∈ {0.01, 0.1, 0.48}). It may over-state
+  privacy spent; it never under-states it *in this regime* — so a claim made
+  with it is never optimistic *within the tested range*.
 - **Agreement is regime-dependent.** In the practical DP-SGD regime (σ ≥ 1,
   moderate sampling) it tracks Opacus within ~7–10%. It loosens substantially
   at extreme low sampling rates and low σ (tens of percent), where the
   integer-order bound is slack.
 
+### Per-parameter clipping (known limitation)
+
+The trainer clips gradients **per LoRA parameter tensor** rather than using
+global per-sample gradient clipping (clipping the combined L2 norm across all
+parameters). This is a pragmatic choice for LoRA — the adapter matrices are
+small and independent — but it has a privacy implication:
+
+When the number of LoRA target modules (P) exceeds the batch size (n),
+per-parameter clipping adds more noise than the accountant budgets for,
+because each parameter is independently clipped to `C`. The effective
+sensitivity becomes `P·C` rather than `C`, which the accountant does not
+account for. This means the accountant can **under-state ε** when `P > n`.
+
+For typical configurations (P=6–12 modules, batch=48+), this is not a concern.
+For extreme configs (P=192, batch=4), reported ε may be understated by up to
+4×. **If your config has P > n, use global clipping or increase the batch size.**
+This is documented in [SECURITY.md](SECURITY.md) as a known limitation.
+
 **Operational guidance:** use this accountant for in-the-loop budgeting and as a
-*safe upper bound*; use Opacus (or another fractional-order accountant) for any
-ε you publish or put in front of a compliance reviewer. This repository does not
-claim the accountant is tight — it claims it is *safe* and characterises exactly
-where it is loose. That distinction is the whole point of the report.
+*safe upper bound within its tested regime*; use Opacus (or another
+fractional-order accountant) for any ε you publish or put in front of a
+compliance reviewer. This repository does not claim the accountant is tight —
+it claims it is *safe in the tested regime* and characterises exactly where it
+is loose. That distinction is the whole point of the report.
 
 ## 5. What to take away
 
@@ -149,7 +175,9 @@ where it is loose. That distinction is the whole point of the report.
 ### Reproduce
 
 ```bash
-pip install "dp-lora-edge[opacus,dev]"
+git clone https://github.com/CiphemonJY/dp-lora-edge.git
+cd dp-lora-edge
+pip install -e ".[opacus,dev]"
 pytest -q                              # accountant + no-op regression
 python examples/calibration_table.py   # the σ/ε/noise calibration math
 ```

@@ -20,7 +20,6 @@ survive a run again.
 """
 from __future__ import annotations
 
-import math
 import random
 from dataclasses import dataclass, field
 from typing import List, Optional
@@ -99,7 +98,7 @@ def _dp_lora_gradients(model, batch_texts, tokenizer, device, cfg: DPConfig, max
         shape = [g.size(0)] + [1] * (g.ndim - 1)
         clipped = g * factor.view(shape)
         avg = clipped.mean(dim=0)
-        noise_std = cfg.noise_multiplier * cfg.clip_norm / math.sqrt(n)
+        noise_std = cfg.noise_multiplier * cfg.clip_norm / n
         noised[name] = (avg + torch.randn_like(avg) * noise_std).to(device)
     return noised
 

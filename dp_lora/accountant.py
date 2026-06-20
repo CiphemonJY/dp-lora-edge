@@ -78,11 +78,17 @@ def compute_epsilon(
         return 0.0
     if noise_multiplier <= 0:
         return float("inf")
+    if delta <= 0 or delta >= 1:
+        raise ValueError("delta must be in (0, 1)")
+    if sampling_rate > 1.0:
+        sampling_rate = 1.0
 
     sigma = noise_multiplier
     ln_inv_delta = math.log(1.0 / delta)
 
     if sampling_rate < 1.0:
+        if sampling_rate <= 0:
+            raise ValueError("sampling_rate must be positive")
         best = float("inf")
         for a in range(2, 64):
             rdp = steps * _sgm_rdp(a, sampling_rate, sigma)
@@ -135,8 +141,15 @@ def calibrate_noise_for_epsilon(
 def noise_per_element(noise_multiplier: float, clip_norm: float, batch_size: int) -> float:
     """
     Std-dev of DP noise added per gradient element, for the averaged-gradient
-    mechanism: σ·C/√batch. This is the quantity that determines whether
-    learning survives the noise — compare it to the per-element gradient
-    magnitude (REPORT.md "Signal-to-noise"). Larger batches average noise down.
+    mechanism: σ·C/n (standard DP-SGD noise scaling). This is the quantity that
+    determines whether learning survives the noise — compare it to the
+    per-element gradient magnitude (REPORT.md "Signal-to-noise"). Larger
+    batches average noise down.
+
+    Note: the original version of this function used σ·C/√batch, which is
+    √n larger than standard DP-SGD's σ·C/n. The trainer was updated to match.
+    See REPORT.md "Accountant fidelity" for the full discussion.
     """
-    return noise_multiplier * clip_norm / math.sqrt(batch_size)
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive")
+    return noise_multiplier * clip_norm / batch_size
