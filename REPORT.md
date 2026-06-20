@@ -196,9 +196,86 @@ accountant, FFA-LoRA trainer, and gates are in `dp_lora/`.
 
 ## Single-seed caveat
 
-Results in `results/gates.json` are from **single-seed runs**. Multi-seed
-variance was not measured. The lora_B_norm trajectory and gate verdicts are
-deterministic (the no-op detection logic does not depend on random seeds), but
-the exact perplexity values may vary by ±1-2 points across seeds. A proper
-multi-seed study (3-5 seeds per arm) would tighten the confidence intervals on
-the reported delta_pct values.
+Results in `results/gates.json` are from **single-seed runs**. The
+`lora_B_norm` trajectory and gate verdicts are deterministic (the no-op
+detection logic does not depend on random seeds), but the exact perplexity
+values may vary across seeds. The multi-seed ablation study below tightens
+the confidence intervals.
+
+---
+
+## 6. Multi-seed ablation study
+
+A 5-experiment ablation running on a single DGX Spark node (NVIDIA GB10,
+Qwen2.5-1.5B-Instruct, bfloat16). Config: σ=1.18 (calibrated for ε=8, δ=1e-5),
+clip=0.5, batch=48, 4 rounds × 50 clients × 20 local steps.
+
+| Experiment | Mode | Seeds | Purpose |
+|-----------|------|-------|---------|
+| ffa_seed42 | FFA-LoRA (B only) | 1/3 | Multi-seed variance |
+| ffa_seed43 | FFA-LoRA (B only) | 2/3 | Multi-seed variance |
+| ffa_seed44 | FFA-LoRA (B only) | 3/3 | Multi-seed variance |
+| standard_lora | LoRA (A+B) | 1 | Ablation: does training A help? |
+| full_dp_sgd | All weights | 1 | Baseline: full-model DP-SGD |
+
+### Results
+
+<!-- Results will be filled in when the ablation study completes.
+     Script: scripts/multiseed_ablation.py
+     Output: results/multiseed_ablation.json
+     Expected fields per experiment: seed, mode, base_ppl, trained_ppl,
+     delta_pct, lora_B_norm, rounds_completed, time_seconds -->
+
+**FFA-LoRA variance (3 seeds):**
+
+| Seed | Base PPL | Trained PPL | Δ% | lora_B norm | Status |
+|------|----------|-------------|-----|-------------|--------|
+| 42 | _pending_ | _pending_ | _pending_ | _pending_ | _running_ |
+| 43 | — | — | — | — | _queued_ |
+| 44 | — | — | — | — | _queued_ |
+
+_Mean Δ%: ±_ (pending)
+_Std Δ%: ±_ (pending)
+
+**Standard LoRA (A+B trained):**
+
+| Seed | Base PPL | Trained PPL | Δ% | lora_B norm | Status |
+|------|----------|-------------|-----|-------------|--------|
+| 42 | — | — | — | — | _queued_ |
+
+**Full DP-SGD (all weights, no LoRA):**
+
+| Seed | Base PPL | Trained PPL | Δ% | Status |
+|------|----------|-------------|-----|--------|
+| 42 | — | — | — | _queued_ |
+
+### Interpretation (to be completed)
+
+- **FFA-LoRA variance:** If std(Δ%) < 2%, single-seed results in `gates.json`
+  are representative. If > 5%, the gate thresholds need widening.
+- **Standard LoRA vs FFA-LoRA:** If standard LoRA (training both A and B)
+  outperforms FFA-LoRA (B only), the A matrix carries useful signal under DP
+  noise — worth investigating as an alternative training scheme.
+- **Full DP-SGD baseline:** If full DP-SGD (all weights) underperforms FFA-LoRA,
+  LoRA's parameter efficiency is the primary utility driver, not just noise
+  reduction. This would be the publishable finding.
+
+### Reproduce
+
+```bash
+# Single-node (what was run):
+python scripts/multiseed_ablation.py --experiment all --seeds 3 \
+  --sigma 1.18 --clip 0.5 --batch-size 48 --rounds 4 \
+  --clients 50 --local-steps 20 --device cuda
+
+# Results saved to: results/multiseed_ablation.json
+# Log: logs/multiseed_ablation.log
+```
+
+> **Note on 2-node training:** The original 2-node distributed training
+> (Section 1-5 results) used `dist.init_process_group(backend="nccl")` with
+> environment variables directly, not torchrun's `--rdzv_endpoint`. The
+> ablation script supports `torchrun` for multi-node, but torchrun's c10d
+> rendezvous mechanism hangs silently on the DGX Spark cluster even when
+> TCP ports are confirmed reachable. The single-node fallback runs all
+> experiments sequentially on one GPU.
