@@ -338,7 +338,7 @@ Qwen2.5-7B-Instruct, single-node (DGX Spark secondary, NVIDIA GB10).
 ### Reproduce
 
 ```bash
-# On DGX Spark secondary (spark-8686):
+# On the secondary DGX Spark node:
 # python scripts/train_7b.py --sigma 1.18 --clip 0.5 --batch-size 16 \
 #   --rounds 4 --clients 50 --local-steps 20 --device cuda
 # Results: results/larger_model_7b.json
