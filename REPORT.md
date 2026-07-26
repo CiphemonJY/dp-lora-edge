@@ -230,9 +230,9 @@ clip=0.5, batch=48, 4 rounds × 50 clients × 20 local steps.
 
 | Seed | Base PPL | Trained PPL | Δ% | lora_B norm | Time (s) | Status |
 |------|----------|-------------|-----|-------------|----------|--------|
-| 42 | 4.7827 | 2.3613 | 50.63 | 212.98 | 29,403 | ✅ Complete |
-| 43 | 4.7827 | 2.3396 | 51.08 | 212.00 | 29,744 | ✅ Complete |
-| 44 | 4.7827 | 2.3907 | 50.01 | 212.87 | 29,684 | ✅ Complete |
+| 42 | 4.7827 | 2.3613 | 50.63 | 212.98 | 29,403 | Complete |
+| 43 | 4.7827 | 2.3396 | 51.08 | 212.00 | 29,744 | Complete |
+| 44 | 4.7827 | 2.3907 | 50.01 | 212.87 | 29,684 | Complete |
 
 **Mean Δ%: 50.57 ± 0.54** (std across 3 seeds)
 **Mean trained PPL: 2.364 ± 0.026**
@@ -244,13 +244,13 @@ clip=0.5, batch=48, 4 rounds × 50 clients × 20 local steps.
 
 | Seed | Base PPL | Trained PPL | Δ% | lora_B norm | Time (s) | Status |
 |------|----------|-------------|-----|-------------|----------|--------|
-| 42 | 4.7827 | 1.8103 | 62.15 | 469.33 | 30,598 | ✅ Complete |
+| 42 | 4.7827 | 1.8103 | 62.15 | 469.33 | 30,598 | Complete |
 
 **Full DP-SGD (all weights, no LoRA):**
 
 | Seed | Base PPL | Trained PPL | Δ% | Status |
 |------|----------|-------------|-----|--------|
-| 42 | 4.7827 | — | — | ❌ Crashed (OOM during Round 1) |
+| 42 | 4.7827 | — | — | Crashed (OOM during Round 1) |
 
 > **Full DP-SGD OOM:** Full-weight DP-SGD exceeded the GB10's 130.7GB VRAM
 > during Round 1 with batch_size=48. The per-sample gradient computation for
