@@ -144,4 +144,4 @@ Note: the 2-node run used the per-parameter clipping path (default) with
 batch=48 and P=28 LoRA modules, so P < n and the per-parameter caveat does
 not apply. For configs with many target modules, use `global_clip=True`.
 
-Apache-2.0.
+MIT.

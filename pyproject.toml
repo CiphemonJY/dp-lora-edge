@@ -7,14 +7,14 @@ name = "dp-lora-edge"
 version = "0.2.2"
 description = "Differentially private LoRA fine-tuning at calibrated epsilon, with a self-contained RDP accountant and honest, anomaly-aware gating."
 readme = "README.md"
-license = { text = "Apache-2.0" }
+license = { text = "MIT" }
 requires-python = ">=3.9"
 authors = [{ name = "CiphemonJY" }]
 keywords = ["differential-privacy", "lora", "federated-learning", "dp-sgd", "rdp", "peft"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
